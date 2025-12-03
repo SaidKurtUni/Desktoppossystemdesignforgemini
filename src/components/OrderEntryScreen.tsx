@@ -124,9 +124,9 @@ export function OrderEntryScreen({
         'atistirmalik': '🍔 Atıştırmal��k'
       };
       let loadedCategorySettings: { [key: string]: CategorySettings } = {
-        biralar: { showInMenu: true, showInInventory: true },
-        kokteyller: { showInMenu: true, showInInventory: true },
-        atistirmalik: { showInMenu: true, showInInventory: true }
+        biralar: { showInMenu: true, showInInventory: true, requiresIngredients: false },
+        kokteyller: { showInMenu: true, showInInventory: true, requiresIngredients: true },
+        atistirmalik: { showInMenu: true, showInInventory: true, requiresIngredients: false }
       };
 
       if (savedCategories) {
@@ -147,7 +147,17 @@ export function OrderEntryScreen({
 
       if (savedCategorySettings) {
         try {
-          loadedCategorySettings = JSON.parse(savedCategorySettings);
+          const parsed = JSON.parse(savedCategorySettings);
+          // Migration: requiresIngredients alanı yoksa ekle
+          const migrated: { [key: string]: CategorySettings } = {};
+          Object.keys(parsed).forEach(key => {
+            migrated[key] = {
+              showInMenu: parsed[key].showInMenu ?? true,
+              showInInventory: parsed[key].showInInventory ?? true,
+              requiresIngredients: parsed[key].requiresIngredients ?? (key === 'kokteyller')
+            };
+          });
+          loadedCategorySettings = migrated;
         } catch (error) {
           console.error('Kategori ayarları yüklenemedi:', error);
         }

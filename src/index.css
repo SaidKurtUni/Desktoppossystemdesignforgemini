@@ -72,6 +72,8 @@
     --color-red-400: oklch(.704 .191 22.216);
     --color-red-500: oklch(.637 .237 25.331);
     --color-red-600: oklch(.577 .245 27.325);
+    --color-green-600: oklch(.627 .194 149.214);
+    --color-green-700: oklch(.527 .154 150.069);
     --color-blue-400: oklch(.707 .165 254.624);
     --color-blue-500: oklch(.623 .214 259.815);
     --color-blue-600: oklch(.546 .245 262.881);
@@ -533,10 +535,6 @@
     z-index: 0;
   }
 
-  .z-10 {
-    z-index: 10;
-  }
-
   .z-20 {
     z-index: 20;
   }
@@ -547,6 +545,18 @@
 
   .z-\[60\] {
     z-index: 60;
+  }
+
+  .col-span-2 {
+    grid-column: span 2 / span 2;
+  }
+
+  .col-span-3 {
+    grid-column: span 3 / span 3;
+  }
+
+  .col-span-7 {
+    grid-column: span 7 / span 7;
   }
 
   .container {
@@ -687,6 +697,10 @@
     display: none;
   }
 
+  .inline {
+    display: inline;
+  }
+
   .inline-block {
     display: inline-block;
   }
@@ -761,16 +775,16 @@
     height: calc(var(--spacing) * 24);
   }
 
+  .h-\[1\.15rem\] {
+    height: 1.15rem;
+  }
+
   .h-\[calc\(100\%-90px\)\] {
     height: calc(100% - 90px);
   }
 
   .h-full {
     height: 100%;
-  }
-
-  .h-px {
-    height: 1px;
   }
 
   .h-screen {
@@ -843,10 +857,6 @@
 
   .w-24 {
     width: calc(var(--spacing) * 24);
-  }
-
-  .w-48 {
-    width: calc(var(--spacing) * 48);
   }
 
   .w-\[20\%\] {
@@ -1001,6 +1011,10 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
+  .grid-cols-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
   .grid-cols-\[140px_120px_100px_180px_120px_120px_140px\] {
     grid-template-columns: 140px 120px 100px 180px 120px 120px 140px;
   }
@@ -1023,6 +1037,10 @@
 
   .items-center {
     align-items: center;
+  }
+
+  .items-end {
+    align-items: flex-end;
   }
 
   .items-start {
@@ -1302,6 +1320,16 @@
     }
   }
 
+  .border-neutral-700\/30 {
+    border-color: color-mix(in srgb, oklch(.371 0 0) 30%, transparent);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .border-neutral-700\/30 {
+      border-color: color-mix(in oklab, var(--color-neutral-700) 30%, transparent);
+    }
+  }
+
   .border-purple-500\/30 {
     border-color: color-mix(in srgb, oklch(.627 .265 303.9) 30%, transparent);
   }
@@ -1502,8 +1530,16 @@
     background-color: var(--color-blue-500);
   }
 
+  .bg-card {
+    background-color: var(--card);
+  }
+
   .bg-destructive {
     background-color: var(--destructive);
+  }
+
+  .bg-green-600 {
+    background-color: var(--color-green-600);
   }
 
   .bg-neutral-400 {
@@ -1516,6 +1552,16 @@
 
   .bg-neutral-600 {
     background-color: var(--color-neutral-600);
+  }
+
+  .bg-neutral-700\/20 {
+    background-color: color-mix(in srgb, oklch(.371 0 0) 20%, transparent);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-neutral-700\/20 {
+      background-color: color-mix(in oklab, var(--color-neutral-700) 20%, transparent);
+    }
   }
 
   .bg-neutral-800 {
@@ -1708,6 +1754,11 @@
     .to-red-500\/10 {
       --tw-gradient-to: color-mix(in oklab, var(--color-red-500) 10%, transparent);
     }
+  }
+
+  .to-transparent {
+    --tw-gradient-to: transparent;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
 
   .p-0\.5 {
@@ -2136,6 +2187,11 @@
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
 
+  .ring-0 {
+    --tw-ring-shadow: var(--tw-ring-inset, ) 0 0 0 calc(0px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
   .shadow-\[\#00E676\]\/20 {
     --tw-shadow-color: #00e67633;
   }
@@ -2500,6 +2556,12 @@
   }
 
   @media (hover: hover) {
+    .hover\:border-\[\#FF9100\]:hover {
+      border-color: #ff9100;
+    }
+  }
+
+  @media (hover: hover) {
     .hover\:border-\[\#FF9100\]\/50:hover {
       border-color: oklab(75.8638% .0866996 .1541 / .5);
     }
@@ -2622,6 +2684,12 @@
       .hover\:bg-destructive\/90:hover {
         background-color: color-mix(in oklab, var(--destructive) 90%, transparent);
       }
+    }
+  }
+
+  @media (hover: hover) {
+    .hover\:bg-green-700:hover {
+      background-color: var(--color-green-700);
     }
   }
 
@@ -2794,6 +2862,15 @@
     }
   }
 
+  .data-\[state\=checked\]\:translate-x-\[calc\(100\%-2px\)\][data-state="checked"] {
+    --tw-translate-x: calc(100% - 2px);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+
+  .data-\[state\=checked\]\:bg-primary[data-state="checked"] {
+    background-color: var(--primary);
+  }
+
   .data-\[state\=closed\]\:animate-out[data-state="closed"] {
     animation: exit var(--tw-duration, .15s) var(--tw-ease, ease);
   }
@@ -2816,6 +2893,15 @@
 
   .data-\[state\=open\]\:zoom-in-95[data-state="open"] {
     --tw-enter-scale: .95;
+  }
+
+  .data-\[state\=unchecked\]\:translate-x-0[data-state="unchecked"] {
+    --tw-translate-x: calc(var(--spacing) * 0);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+
+  .data-\[state\=unchecked\]\:bg-switch-background[data-state="unchecked"] {
+    background-color: var(--switch-background);
   }
 
   @media (width >= 40rem) {
@@ -2919,6 +3005,24 @@
   @supports (color: color-mix(in lab, red, red)) {
     .dark\:aria-invalid\:ring-destructive\/40:is(.dark *)[aria-invalid="true"] {
       --tw-ring-color: color-mix(in oklab, var(--destructive) 40%, transparent);
+    }
+  }
+
+  .dark\:data-\[state\=checked\]\:bg-primary-foreground:is(.dark *)[data-state="checked"] {
+    background-color: var(--primary-foreground);
+  }
+
+  .dark\:data-\[state\=unchecked\]\:bg-card-foreground:is(.dark *)[data-state="unchecked"] {
+    background-color: var(--card-foreground);
+  }
+
+  .dark\:data-\[state\=unchecked\]\:bg-input\/80:is(.dark *)[data-state="unchecked"] {
+    background-color: var(--input);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .dark\:data-\[state\=unchecked\]\:bg-input\/80:is(.dark *)[data-state="unchecked"] {
+      background-color: color-mix(in oklab, var(--input) 80%, transparent);
     }
   }
 

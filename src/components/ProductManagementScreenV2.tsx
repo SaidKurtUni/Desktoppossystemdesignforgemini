@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Package, Save, X, Search, Tag, FolderPlus } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, Save, X, Search, Tag, Flame, Droplet, Cherry } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -12,13 +12,17 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 import { CategoryManagement, CategorySettings } from './CategoryManagement';
+import { Ingredient, RecipeItem } from '../types/inventory';
 
 export interface ProductItem {
   id: string;
   name: string;
   price: number;
   category: string;
-  // Bira ürünleri için stok yönetimi alanları
+  // Kokteyl ise reçete bilgisi
+  isCocktail?: boolean;
+  recipe?: RecipeItem[];
+  // Bira/Atıştırmalık ürünleri için stok yönetimi alanları
   supplier?: string;
   currentStock?: number;
   minStock?: number;
@@ -26,6 +30,7 @@ export interface ProductItem {
 }
 
 interface ProductManagementScreenProps {
+  ingredients: Ingredient[];
   onProductsUpdate: () => void;
 }
 
@@ -42,16 +47,56 @@ const defaultProducts: ProductItem[] = [
   { id: 'b8', name: 'MILLER', price: 58, category: 'biralar' },
   { id: 'b9', name: 'BECKs', price: 62, category: 'biralar' },
   
-  // Kokteyller
-  { id: 'c1', name: 'MOJİTO', price: 85, category: 'kokteyller' },
-  { id: 'c2', name: 'MARGARİTA', price: 90, category: 'kokteyller' },
-  { id: 'c3', name: 'COSMOPOLİTAN', price: 95, category: 'kokteyller' },
-  { id: 'c4', name: 'LONG ISLAND', price: 110, category: 'kokteyller' },
-  { id: 'c5', name: 'PIÑA COLADA', price: 100, category: 'kokteyller' },
-  { id: 'c6', name: 'OLD FASHIONED', price: 105, category: 'kokteyller' },
-  { id: 'c7', name: 'NEGRONI', price: 98, category: 'kokteyller' },
-  { id: 'c8', name: 'APEROL SPRITZ', price: 88, category: 'kokteyller' },
-  { id: 'c9', name: 'WHISKEY SOUR', price: 92, category: 'kokteyller' },
+  // Kokteyller - Recipe ile
+  { id: 'c1', name: 'MOJİTO', price: 85, category: 'kokteyller', isCocktail: true, recipe: [
+    { ingredientId: 'white_rum', amount: 5 },
+    { ingredientId: 'lime_juice', amount: 3 },
+    { ingredientId: 'simple_syrup', amount: 2 },
+    { ingredientId: 'soda_water', amount: 10 }
+  ]},
+  { id: 'c2', name: 'MARGARİTA', price: 90, category: 'kokteyller', isCocktail: true, recipe: [
+    { ingredientId: 'tequila', amount: 5 },
+    { ingredientId: 'triple_sec', amount: 3 },
+    { ingredientId: 'lime_juice', amount: 2 }
+  ]},
+  { id: 'c3', name: 'COSMOPOLİTAN', price: 95, category: 'kokteyller', isCocktail: true, recipe: [
+    { ingredientId: 'vodka', amount: 4 },
+    { ingredientId: 'triple_sec', amount: 2 },
+    { ingredientId: 'cranberry_juice', amount: 3 },
+    { ingredientId: 'lime_juice', amount: 1 }
+  ]},
+  { id: 'c4', name: 'LONG ISLAND', price: 110, category: 'kokteyller', isCocktail: true, recipe: [
+    { ingredientId: 'vodka', amount: 2 },
+    { ingredientId: 'tequila', amount: 2 },
+    { ingredientId: 'white_rum', amount: 2 },
+    { ingredientId: 'gin', amount: 2 },
+    { ingredientId: 'cola', amount: 8 }
+  ]},
+  { id: 'c5', name: 'PIÑA COLADA', price: 100, category: 'kokteyller', isCocktail: true, recipe: [
+    { ingredientId: 'white_rum', amount: 5 },
+    { ingredientId: 'pineapple_juice', amount: 10 },
+    { ingredientId: 'coconut_cream', amount: 3 }
+  ]},
+  { id: 'c6', name: 'OLD FASHIONED', price: 105, category: 'kokteyller', isCocktail: true, recipe: [
+    { ingredientId: 'bourbon', amount: 6 },
+    { ingredientId: 'simple_syrup', amount: 1 },
+    { ingredientId: 'angostura_bitters', amount: 0.5 }
+  ]},
+  { id: 'c7', name: 'NEGRONI', price: 98, category: 'kokteyller', isCocktail: true, recipe: [
+    { ingredientId: 'gin', amount: 3 },
+    { ingredientId: 'campari', amount: 3 },
+    { ingredientId: 'red_vermouth', amount: 3 }
+  ]},
+  { id: 'c8', name: 'APEROL SPRITZ', price: 88, category: 'kokteyller', isCocktail: true, recipe: [
+    { ingredientId: 'aperol', amount: 6 },
+    { ingredientId: 'prosecco', amount: 9 },
+    { ingredientId: 'soda_water', amount: 3 }
+  ]},
+  { id: 'c9', name: 'WHISKEY SOUR', price: 92, category: 'kokteyller', isCocktail: true, recipe: [
+    { ingredientId: 'whiskey', amount: 5 },
+    { ingredientId: 'lemon_juice', amount: 3 },
+    { ingredientId: 'simple_syrup', amount: 2 }
+  ]},
   
   // Atıştırmalık
   { id: 'f1', name: 'ÇITIR TAVUK KANAT', price: 75, category: 'atistirmalik' },
@@ -70,14 +115,14 @@ const categoryNames: { [key: string]: string } = {
   'atistirmalik': '🍔 Atıştırmalık'
 };
 
-export function ProductManagementScreen({ onProductsUpdate }: ProductManagementScreenProps) {
+export function ProductManagementScreen({ ingredients, onProductsUpdate }: ProductManagementScreenProps) {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [categories, setCategories] = useState<string[]>(['biralar', 'kokteyller', 'atistirmalik']);
   const [categoryNamesLocal, setCategoryNamesLocal] = useState<{ [key: string]: string }>(categoryNames);
   const [categorySettings, setCategorySettings] = useState<{ [key: string]: CategorySettings }>({
-    biralar: { showInMenu: true, showInInventory: true },
-    kokteyller: { showInMenu: true, showInInventory: true },
-    atistirmalik: { showInMenu: true, showInInventory: true }
+    biralar: { showInMenu: true, showInInventory: true, requiresIngredients: false },
+    kokteyller: { showInMenu: true, showInInventory: true, requiresIngredients: true },
+    atistirmalik: { showInMenu: true, showInInventory: true, requiresIngredients: false }
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -90,13 +135,6 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
   
   // Category management states
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
-  const [showEditCategoryDialog, setShowEditCategoryDialog] = useState(false);
-  const [showDeleteCategoryDialog, setShowDeleteCategoryDialog] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState<string>('');
-  const [newCategoryId, setNewCategoryId] = useState('');
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryEmoji, setNewCategoryEmoji] = useState('📦');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -108,6 +146,16 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
     minStock: '',
     unit: 'adet'
   });
+
+  // Recipe Builder States
+  const [recipe, setRecipe] = useState<RecipeItem[]>([]);
+  const [selectedIngredient, setSelectedIngredient] = useState<string>('');
+  const [ingredientAmount, setIngredientAmount] = useState<string>('');
+
+  // Helper: Hammaddeli kategori mi kontrol et (requiresIngredients)
+  const isCocktailCategory = (category: string) => {
+    return categorySettings[category]?.requiresIngredients || false;
+  };
 
   // Load products from localStorage
   useEffect(() => {
@@ -147,10 +195,30 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
 
     if (savedCategorySettings) {
       try {
-        setCategorySettings(JSON.parse(savedCategorySettings));
+        const parsed = JSON.parse(savedCategorySettings);
+        // Migration: requiresIngredients alanı yoksa ekle
+        const migrated: { [key: string]: CategorySettings } = {};
+        Object.keys(parsed).forEach(key => {
+          migrated[key] = {
+            showInMenu: parsed[key].showInMenu ?? true,
+            showInInventory: parsed[key].showInInventory ?? true,
+            requiresIngredients: parsed[key].requiresIngredients ?? (key === 'kokteyller')
+          };
+        });
+        setCategorySettings(migrated);
+        // Save migrated data
+        localStorage.setItem('pos_category_settings', JSON.stringify(migrated));
       } catch {
         // Varsayılan kategori ayarlarını kullan
       }
+    } else {
+      // İlk kurulum - varsayılan ayarları kaydet
+      const defaultSettings = {
+        biralar: { showInMenu: true, showInInventory: true, requiresIngredients: false },
+        kokteyller: { showInMenu: true, showInInventory: true, requiresIngredients: true },
+        atistirmalik: { showInMenu: true, showInInventory: true, requiresIngredients: false }
+      };
+      localStorage.setItem('pos_category_settings', JSON.stringify(defaultSettings));
     }
   }, []);
 
@@ -165,10 +233,55 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
     onProductsUpdate();
   };
 
+  // Recipe Builder - Add ingredient to recipe
+  const handleAddIngredientToRecipe = () => {
+    if (!selectedIngredient || !ingredientAmount || parseFloat(ingredientAmount) <= 0) {
+      toast.error('Lütfen hammadde ve miktar seçin!');
+      return;
+    }
+
+    const amount = parseFloat(ingredientAmount);
+    
+    // Check if ingredient already exists
+    const existingIndex = recipe.findIndex(r => r.ingredientId === selectedIngredient);
+    if (existingIndex >= 0) {
+      toast.error('Bu hammadde zaten eklendi!');
+      return;
+    }
+
+    const newRecipeItem: RecipeItem = {
+      ingredientId: selectedIngredient,
+      amount: amount
+    };
+
+    setRecipe([...recipe, newRecipeItem]);
+    setSelectedIngredient('');
+    setIngredientAmount('');
+    toast.success('Hammadde reçeteye eklendi!');
+  };
+
+  // Recipe Builder - Remove ingredient from recipe
+  const handleRemoveIngredientFromRecipe = (ingredientId: string) => {
+    setRecipe(recipe.filter(r => r.ingredientId !== ingredientId));
+    toast.success('Hammadde reçeteden çıkarıldı!');
+  };
+
+  // Get ingredient name by ID
+  const getIngredientName = (ingredientId: string) => {
+    const ingredient = ingredients.find(ing => ing.id === ingredientId);
+    return ingredient ? ingredient.name : ingredientId;
+  };
+
   // Add new product
   const handleAddProduct = () => {
     if (!formData.name.trim() || !formData.price || parseFloat(formData.price) <= 0) {
       toast.error('Lütfen tüm alanları doldurun!');
+      return;
+    }
+
+    // Hammaddeli kategori ise reçete kontrolü
+    if (isCocktailCategory(formData.category) && recipe.length === 0) {
+      toast.error('Hammaddeli kategori için en az bir hammadde ekleyin!');
       return;
     }
 
@@ -186,6 +299,9 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
       name: formData.name.toUpperCase().trim(),
       price: parseFloat(formData.price),
       category: formData.category,
+      // Kokteyl ise reçete ekle
+      isCocktail: isCocktailCategory(formData.category),
+      recipe: isCocktailCategory(formData.category) ? recipe : undefined,
       // Bira için stok yönetimi alanları
       supplier: formData.supplier,
       currentStock: formData.currentStock ? parseInt(formData.currentStock) : undefined,
@@ -213,9 +329,22 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
       return;
     }
 
+    // Hammaddeli kategori ise reçete kontrolü
+    if (isCocktailCategory(formData.category) && recipe.length === 0) {
+      toast.error('Hammaddeli kategori için en az bir hammadde ekleyin!');
+      return;
+    }
+
     const updatedProducts = products.map(p => 
       p.id === currentProduct.id 
-        ? { ...p, name: formData.name.toUpperCase().trim(), price: parseFloat(formData.price), category: formData.category,
+        ? { 
+            ...p, 
+            name: formData.name.toUpperCase().trim(), 
+            price: parseFloat(formData.price), 
+            category: formData.category,
+            // Kokteyl ise reçete ekle
+            isCocktail: isCocktailCategory(formData.category),
+            recipe: isCocktailCategory(formData.category) ? recipe : undefined,
             // Bira için stok yönetimi alanları
             supplier: formData.supplier,
             currentStock: formData.currentStock ? parseInt(formData.currentStock) : undefined,
@@ -256,12 +385,14 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
       name: '',
       price: '',
       category: 'biralar',
-      // Bira için stok yönetimi alanları
       supplier: '',
       currentStock: '',
       minStock: '',
       unit: 'adet'
     });
+    setRecipe([]);
+    setSelectedIngredient('');
+    setIngredientAmount('');
   };
 
   const openEditDialog = (product: ProductItem) => {
@@ -270,12 +401,19 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
       name: product.name,
       price: product.price.toString(),
       category: product.category,
-      // Bira için stok yönetimi alanları
       supplier: product.supplier || '',
       currentStock: product.currentStock ? product.currentStock.toString() : '',
       minStock: product.minStock ? product.minStock.toString() : '',
       unit: product.unit || 'adet'
     });
+    
+    // Load recipe if cocktail
+    if (product.isCocktail && product.recipe) {
+      setRecipe(product.recipe);
+    } else {
+      setRecipe([]);
+    }
+    
     setShowEditDialog(true);
   };
 
@@ -404,6 +542,12 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
                             <div className="flex-1">
                               <h3 className="font-bold text-white mb-1">{product.name}</h3>
                               <p className="text-[#00E676] font-bold text-xl">{product.price} TL</p>
+                              {product.isCocktail && product.recipe && (
+                                <div className="mt-2 text-xs text-neutral-500">
+                                  <Flame className="w-3 h-3 inline mr-1" />
+                                  {product.recipe.length} hammadde
+                                </div>
+                              )}
                             </div>
                             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
@@ -454,6 +598,12 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
                         <div className="flex-1">
                           <h3 className="font-bold text-white mb-1">{product.name}</h3>
                           <p className="text-[#00E676] font-bold text-xl">{product.price} TL</p>
+                          {product.isCocktail && product.recipe && (
+                            <div className="mt-2 text-xs text-neutral-500">
+                              <Flame className="w-3 h-3 inline mr-1" />
+                              {product.recipe.length} hammadde
+                            </div>
+                          )}
                         </div>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
@@ -482,7 +632,7 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
 
       {/* Add Product Dialog */}
       <AlertDialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <AlertDialogContent className="bg-[#1E1E1E] border-2 border-[#2C2C2C] max-w-md">
+        <AlertDialogContent className="bg-[#1E1E1E] border-2 border-[#2C2C2C] max-w-2xl max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-xl">
               <Plus className="w-6 h-6 text-[#00E676]" />
@@ -530,6 +680,86 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
                 ))}
               </select>
             </div>
+
+            {/* RECIPE BUILDER - Alkol bazlı kokteyller için */}
+            {isCocktailCategory(formData.category) && (
+              <div className="space-y-4 p-4 bg-[#FF9100]/10 border-2 border-[#FF9100]/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <Flame className="w-5 h-5 text-[#FF9100]" />
+                  <span className="font-bold text-[#FF9100]">REÇETE OLUŞTURUCU (CL)</span>
+                </div>
+                
+                {/* Recipe Form */}
+                <div className="grid grid-cols-12 gap-3">
+                  <div className="col-span-7">
+                    <label className="block text-sm font-bold text-neutral-400 mb-2">Hammadde</label>
+                    <select
+                      value={selectedIngredient}
+                      onChange={(e) => setSelectedIngredient(e.target.value)}
+                      className="w-full bg-[#121212] border-2 border-[#2C2C2C] rounded-lg px-4 py-3 text-white focus:border-[#FF9100] focus:outline-none"
+                    >
+                      <option value="">Hammadde seçin...</option>
+                      {ingredients.map(ing => (
+                        <option key={ing.id} value={ing.id}>
+                          {ing.name} ({ing.currentStock} cl)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="col-span-3">
+                    <label className="block text-sm font-bold text-neutral-400 mb-2">Miktar (CL)</label>
+                    <input
+                      type="number"
+                      value={ingredientAmount}
+                      onChange={(e) => setIngredientAmount(e.target.value)}
+                      placeholder="5"
+                      min="0.5"
+                      step="0.5"
+                      className="w-full bg-[#121212] border-2 border-[#2C2C2C] rounded-lg px-4 py-3 text-white focus:border-[#FF9100] focus:outline-none"
+                    />
+                  </div>
+                  
+                  <div className="col-span-2 flex items-end">
+                    <button
+                      onClick={handleAddIngredientToRecipe}
+                      className="w-full bg-[#FF9100] hover:bg-[#FF9100]/90 text-[#121212] rounded-lg px-4 py-3 font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-5 h-5" />
+                      EKLE
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recipe List */}
+                {recipe.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-sm font-bold text-neutral-400 mb-2">Reçete İçeriği ({recipe.length} hammadde)</div>
+                    <div className="space-y-2">
+                      {recipe.map((item) => (
+                        <div
+                          key={item.ingredientId}
+                          className="flex items-center justify-between bg-[#121212] border border-[#2C2C2C] rounded-lg px-4 py-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Droplet className="w-4 h-4 text-[#FF9100]" />
+                            <span className="text-white font-semibold">{getIngredientName(item.ingredientId)}</span>
+                            <span className="text-neutral-400">•</span>
+                            <span className="text-[#FF9100] font-bold">{item.amount} CL</span>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveIngredientFromRecipe(item.ingredientId)}
+                            className="bg-red-500 hover:bg-red-600 p-2 rounded-lg transition-all"
+                          >
+                            <X className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Bira için stok yönetimi alanları - Sadece biralar kategorisinde göster */}
             {formData.category === 'biralar' && (
@@ -591,7 +821,7 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#2C2C2C] border-[#2C2C2C] hover:bg-[#333333]">
+            <AlertDialogCancel className="bg-[#2C2C2C] border-[#2C2C2C] hover:bg-[#333333]" onClick={resetForm}>
               <X className="w-4 h-4 mr-2" />
               İptal
             </AlertDialogCancel>
@@ -606,16 +836,16 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Edit Product Dialog */}
+      {/* Edit Product Dialog - Similar to Add but with Edit functionality */}
       <AlertDialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <AlertDialogContent className="bg-[#1E1E1E] border-2 border-[#2C2C2C] max-w-md">
+        <AlertDialogContent className="bg-[#1E1E1E] border-2 border-[#2C2C2C] max-w-2xl max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-xl">
               <Edit2 className="w-6 h-6 text-blue-500" />
               Ürün Düzenle
             </AlertDialogTitle>
             <AlertDialogDescription className="text-neutral-400">
-              Seçili ürünün bilgilerini güncelleyin. İsim, fiyat ve kategori değiştirebilirsiniz.
+              Seçili ürünün bilgilerini güncelleyin.
             </AlertDialogDescription>
           </AlertDialogHeader>
           
@@ -655,7 +885,87 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
               </select>
             </div>
 
-            {/* Bira için stok yönetimi alanları - Sadece biralar kategorisinde göster */}
+            {/* RECIPE BUILDER - Alkol bazlı kokteyller için */}
+            {isCocktailCategory(formData.category) && (
+              <div className="space-y-4 p-4 bg-[#FF9100]/10 border-2 border-[#FF9100]/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <Flame className="w-5 h-5 text-[#FF9100]" />
+                  <span className="font-bold text-[#FF9100]">REÇETE OLUŞTURUCU (CL)</span>
+                </div>
+                
+                {/* Recipe Form */}
+                <div className="grid grid-cols-12 gap-3">
+                  <div className="col-span-7">
+                    <label className="block text-sm font-bold text-neutral-400 mb-2">Hammadde</label>
+                    <select
+                      value={selectedIngredient}
+                      onChange={(e) => setSelectedIngredient(e.target.value)}
+                      className="w-full bg-[#121212] border-2 border-[#2C2C2C] rounded-lg px-4 py-3 text-white focus:border-[#FF9100] focus:outline-none"
+                    >
+                      <option value="">Hammadde seçin...</option>
+                      {ingredients.map(ing => (
+                        <option key={ing.id} value={ing.id}>
+                          {ing.name} ({ing.currentStock} cl)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="col-span-3">
+                    <label className="block text-sm font-bold text-neutral-400 mb-2">Miktar (CL)</label>
+                    <input
+                      type="number"
+                      value={ingredientAmount}
+                      onChange={(e) => setIngredientAmount(e.target.value)}
+                      placeholder="5"
+                      min="0.5"
+                      step="0.5"
+                      className="w-full bg-[#121212] border-2 border-[#2C2C2C] rounded-lg px-4 py-3 text-white focus:border-[#FF9100] focus:outline-none"
+                    />
+                  </div>
+                  
+                  <div className="col-span-2 flex items-end">
+                    <button
+                      onClick={handleAddIngredientToRecipe}
+                      className="w-full bg-[#FF9100] hover:bg-[#FF9100]/90 text-[#121212] rounded-lg px-4 py-3 font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-5 h-5" />
+                      EKLE
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recipe List */}
+                {recipe.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-sm font-bold text-neutral-400 mb-2">Reçete İçeriği ({recipe.length} hammadde)</div>
+                    <div className="space-y-2">
+                      {recipe.map((item) => (
+                        <div
+                          key={item.ingredientId}
+                          className="flex items-center justify-between bg-[#121212] border border-[#2C2C2C] rounded-lg px-4 py-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Droplet className="w-4 h-4 text-[#FF9100]" />
+                            <span className="text-white font-semibold">{getIngredientName(item.ingredientId)}</span>
+                            <span className="text-neutral-400">•</span>
+                            <span className="text-[#FF9100] font-bold">{item.amount} CL</span>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveIngredientFromRecipe(item.ingredientId)}
+                            className="bg-red-500 hover:bg-red-600 p-2 rounded-lg transition-all"
+                          >
+                            <X className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Bira için stok yönetimi alanları */}
             {formData.category === 'biralar' && (
               <div className="space-y-4 p-4 bg-[#00E676]/5 border border-[#00E676]/20 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
@@ -711,7 +1021,7 @@ export function ProductManagementScreen({ onProductsUpdate }: ProductManagementS
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#2C2C2C] border-[#2C2C2C] hover:bg-[#333333]">
+            <AlertDialogCancel className="bg-[#2C2C2C] border-[#2C2C2C] hover:bg-[#333333]" onClick={resetForm}>
               <X className="w-4 h-4 mr-2" />
               İptal
             </AlertDialogCancel>

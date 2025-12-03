@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Save, Tag, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Save, Tag, Eye, EyeOff, Beaker } from 'lucide-react';
 import { toast } from 'sonner';
+import { Switch } from './ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +16,7 @@ import {
 export interface CategorySettings {
   showInMenu: boolean;
   showInInventory: boolean;
+  requiresIngredients: boolean; // Hammadde gerektiren kategori mi?
 }
 
 interface CategoryManagementProps {
@@ -43,6 +45,7 @@ export function CategoryManagement({
   const [newCategoryId, setNewCategoryId] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryEmoji, setNewCategoryEmoji] = useState('📦');
+  const [requiresIngredients, setRequiresIngredients] = useState(false);
 
   const handleAddCategory = () => {
     if (!newCategoryId.trim() || !newCategoryName.trim()) {
@@ -63,13 +66,17 @@ export function CategoryManagement({
     };
     const updatedCategorySettings: { [key: string]: CategorySettings } = {
       ...categorySettings,
-      [newCategoryId.toLowerCase()]: { showInMenu: true, showInInventory: true } // Default olarak hem menüde hem stokta göster
+      [newCategoryId.toLowerCase()]: { 
+        showInMenu: true, 
+        showInInventory: true,
+        requiresIngredients: requiresIngredients
+      }
     };
 
     onCategoriesUpdate(updatedCategories, updatedCategoryNames, updatedCategorySettings);
 
     toast.success('Kategori eklendi!', {
-      description: `${newCategoryEmoji} ${newCategoryName} (Menü & Stokta Görünür)`
+      description: `${newCategoryEmoji} ${newCategoryName} ${requiresIngredients ? '(Hammaddeli)' : '(Hammaddesiz)'}`
     });
 
     setShowAddDialog(false);
@@ -87,7 +94,15 @@ export function CategoryManagement({
       [currentCategory]: `${newCategoryEmoji} ${newCategoryName}`
     };
 
-    onCategoriesUpdate(categories, updatedCategoryNames, categorySettings);
+    const updatedCategorySettings = {
+      ...categorySettings,
+      [currentCategory]: {
+        ...categorySettings[currentCategory],
+        requiresIngredients: requiresIngredients
+      }
+    };
+
+    onCategoriesUpdate(categories, updatedCategoryNames, updatedCategorySettings);
 
     toast.success('Kategori güncellendi!');
 
@@ -122,6 +137,7 @@ export function CategoryManagement({
     setNewCategoryId('');
     setNewCategoryName('');
     setNewCategoryEmoji('📦');
+    setRequiresIngredients(false);
     setCurrentCategory('');
   };
 
@@ -137,6 +153,8 @@ export function CategoryManagement({
       setNewCategoryEmoji('📦');
       setNewCategoryName(fullName);
     }
+    // Mevcut requiresIngredients ayarını yükle
+    setRequiresIngredients(categorySettings[category]?.requiresIngredients || false);
     setShowEditDialog(true);
   };
 
@@ -212,6 +230,12 @@ export function CategoryManagement({
                       <span className="text-xs text-neutral-500 bg-[#2C2C2C] px-2 py-1 rounded">
                         ID: {category}
                       </span>
+                      {categorySettings[category]?.requiresIngredients && (
+                        <span className="text-xs bg-[#00E676] text-[#121212] px-2 py-1 rounded font-bold flex items-center gap-1">
+                          <Beaker className="w-3 h-3" />
+                          Hammaddeli
+                        </span>
+                      )}
                     </div>
                     <p className="text-neutral-500 text-sm mt-1">
                       {productsInCategories[category] || 0} ürün
@@ -318,9 +342,44 @@ export function CategoryManagement({
               </p>
             </div>
 
+            <div className="bg-[#121212] border-2 border-[#2C2C2C] rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Beaker className="w-5 h-5 text-[#00E676]" />
+                  <div>
+                    <label className="block font-bold text-white mb-1">
+                      Hammaddeli Kategori
+                    </label>
+                    <p className="text-xs text-neutral-500">
+                      Bu kategoriye ürün eklerken hammadde (alkol) seçimi zorunlu olsun mu?
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={requiresIngredients}
+                  onCheckedChange={setRequiresIngredients}
+                />
+              </div>
+              {requiresIngredients && (
+                <div className="mt-3 bg-[#00E676]/10 border border-[#00E676]/30 rounded-lg p-2">
+                  <p className="text-xs text-[#00E676]">
+                    ✓ Bu kategorideki ürünler reçete bazlı stok takibi yapacak (örn: Kokteyller, Teqila Shotlar)
+                  </p>
+                </div>
+              )}
+              {!requiresIngredients && (
+                <div className="mt-3 bg-neutral-700/20 border border-neutral-700/30 rounded-lg p-2">
+                  <p className="text-xs text-neutral-400">
+                    Bu kategorideki ürünler adet bazlı stok takibi yapacak (örn: Biralar, Atıştırmalıklar)
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="bg-[#00E676]/10 border border-[#00E676]/30 rounded-lg p-3">
               <p className="text-sm text-neutral-300">
                 <strong className="text-[#00E676]">Önizleme:</strong> {newCategoryEmoji} {newCategoryName}
+                {requiresIngredients && <span className="ml-2 text-xs bg-[#00E676] text-[#121212] px-2 py-1 rounded font-bold">Hammaddeli</span>}
               </p>
             </div>
           </div>
@@ -386,9 +445,44 @@ export function CategoryManagement({
               />
             </div>
 
+            <div className="bg-[#121212] border-2 border-[#2C2C2C] rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Beaker className="w-5 h-5 text-[#00E676]" />
+                  <div>
+                    <label className="block font-bold text-white mb-1">
+                      Hammaddeli Kategori
+                    </label>
+                    <p className="text-xs text-neutral-500">
+                      Bu kategoriye ürün eklerken hammadde (alkol) seçimi zorunlu olsun mu?
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={requiresIngredients}
+                  onCheckedChange={setRequiresIngredients}
+                />
+              </div>
+              {requiresIngredients && (
+                <div className="mt-3 bg-[#00E676]/10 border border-[#00E676]/30 rounded-lg p-2">
+                  <p className="text-xs text-[#00E676]">
+                    ✓ Bu kategorideki ürünler reçete bazlı stok takibi yapacak (örn: Kokteyller, Teqila Shotlar)
+                  </p>
+                </div>
+              )}
+              {!requiresIngredients && (
+                <div className="mt-3 bg-neutral-700/20 border border-neutral-700/30 rounded-lg p-2">
+                  <p className="text-xs text-neutral-400">
+                    Bu kategorideki ürünler adet bazlı stok takibi yapacak (örn: Biralar, Atıştırmalıklar)
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="bg-[#00E676]/10 border border-[#00E676]/30 rounded-lg p-3">
               <p className="text-sm text-neutral-300">
                 <strong className="text-[#00E676]">Önizleme:</strong> {newCategoryEmoji} {newCategoryName}
+                {requiresIngredients && <span className="ml-2 text-xs bg-[#00E676] text-[#121212] px-2 py-1 rounded font-bold">Hammaddeli</span>}
               </p>
             </div>
           </div>
@@ -417,26 +511,28 @@ export function CategoryManagement({
               <Trash2 className="w-6 h-6 text-red-500" />
               Kategoriyi Sil
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-neutral-400">
-              <div className="space-y-3 mt-3">
-                <p className="text-base">
-                  <strong className="text-white">{categoryNames[currentCategory]}</strong> kategorisini silmek istediğinize emin misiniz?
-                </p>
-                {productsInCategories[currentCategory] > 0 ? (
-                  <div className="bg-red-500/10 border-2 border-red-500/30 p-3 rounded">
-                    <p className="text-red-400 text-sm">
-                      ⚠️ Bu kategoride {productsInCategories[currentCategory]} ürün var! Önce ürünleri silin veya başka kategoriye taşıyın.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-red-500/10 border-2 border-red-500/30 p-3 rounded">
-                    <p className="text-red-400 text-sm">
-                      ⚠️ Bu işlem geri alınamaz!
-                    </p>
-                  </div>
-                )}
-              </div>
+          </AlertDialogHeader>
+          
+          <div className="space-y-3 px-6">
+            <AlertDialogDescription className="text-neutral-400 text-base">
+              <strong className="text-white">{categoryNames[currentCategory]}</strong> kategorisini silmek istediğinize emin misiniz?
             </AlertDialogDescription>
+            {productsInCategories[currentCategory] > 0 ? (
+              <div className="bg-red-500/10 border-2 border-red-500/30 p-3 rounded">
+                <span className="text-red-400 text-sm">
+                  ⚠️ Bu kategoride {productsInCategories[currentCategory]} ürün var! Önce ürünleri silin veya başka kategoriye taşıyın.
+                </span>
+              </div>
+            ) : (
+              <div className="bg-red-500/10 border-2 border-red-500/30 p-3 rounded">
+                <span className="text-red-400 text-sm">
+                  ⚠️ Bu işlem geri alınamaz!
+                </span>
+              </div>
+            )}
+          </div>
+          
+          <AlertDialogHeader className="hidden">
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-[#2C2C2C] border-[#2C2C2C] hover:bg-[#333333]">

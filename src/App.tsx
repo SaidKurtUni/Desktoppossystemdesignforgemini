@@ -3,9 +3,11 @@ import { DashboardScreen } from './components/DashboardScreen';
 import { OrderEntryScreen } from './components/OrderEntryScreen';
 import { ReportScreen } from './components/ReportScreen';
 import { TransactionHistoryScreen } from './components/TransactionHistoryScreen';
-import { InventoryScreen, InventoryProduct } from './components/InventoryScreen';
+import { InventoryScreen, InventoryProduct } from './components/InventoryScreenNew';
 import { BackupScreen, createBackup } from './components/BackupScreen';
-import { ProductManagementScreen } from './components/ProductManagementScreen';
+import { ProductManagementScreen } from './components/ProductManagementScreenV2';
+import { CategorySettings } from './components/CategoryManagement';
+import { Ingredient } from './types/inventory';
 import { Menu, LayoutDashboard, FileText, History, Package, Shield, ShoppingBag } from 'lucide-react';
 import { Toaster } from 'sonner@2.0.3';
 import { toast } from 'sonner';
@@ -121,6 +123,20 @@ const defaultProducts = [
   { id: 'f9', name: 'MEZE TABAĞI', price: 70, category: 'atistirmalik' },
 ];
 
+// Varsayılan Hammaddeler (İçerikler) - Kokteyller için (SADECE ALKOL)
+const defaultIngredients: Ingredient[] = [
+  // Alkol Bazlı İçerikler
+  { id: 'ing-vodka', name: 'ABSOLUT VOTKA', currentStock: 700, minStock: 350, unit: 'cl', supplier: 'Pernod Ricard', lastRestocked: '01.12.2024', price: 2.5, type: 'alcohol' },
+  { id: 'ing-rum', name: 'BACARDI ROM', currentStock: 700, minStock: 350, unit: 'cl', supplier: 'Bacardi', lastRestocked: '01.12.2024', price: 2.2, type: 'alcohol' },
+  { id: 'ing-gin', name: 'GORDONS GIN', currentStock: 700, minStock: 350, unit: 'cl', supplier: 'Diageo', lastRestocked: '01.12.2024', price: 2.4, type: 'alcohol' },
+  { id: 'ing-tequila', name: 'JOSE CUERVO TEKİLA', currentStock: 700, minStock: 350, unit: 'cl', supplier: 'Jose Cuervo', lastRestocked: '01.12.2024', price: 2.8, type: 'alcohol' },
+  { id: 'ing-whiskey', name: 'JACK DANIELS WHISKEY', currentStock: 700, minStock: 350, unit: 'cl', supplier: 'Brown-Forman', lastRestocked: '01.12.2024', price: 3.5, type: 'alcohol' },
+  { id: 'ing-aperol', name: 'APEROL', currentStock: 700, minStock: 350, unit: 'cl', supplier: 'Campari Group', lastRestocked: '01.12.2024', price: 2.0, type: 'alcohol' },
+  { id: 'ing-campari', name: 'CAMPARI', currentStock: 350, minStock: 175, unit: 'cl', supplier: 'Campari Group', lastRestocked: '01.12.2024', price: 2.3, type: 'alcohol' },
+  { id: 'ing-triple-sec', name: 'TRIPLE SEC', currentStock: 350, minStock: 175, unit: 'cl', supplier: 'Bols', lastRestocked: '30.11.2024', price: 1.8, type: 'alcohol' },
+  { id: 'ing-coconut-rum', name: 'MALIBU (HİNDİSTAN CEVİZİ ROM)', currentStock: 350, minStock: 175, unit: 'cl', supplier: 'Pernod Ricard', lastRestocked: '30.11.2024', price: 2.1, type: 'alcohol' },
+];
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
@@ -155,6 +171,16 @@ export default function App() {
   
   // Products State - Ürün Yönetimi için
   const [products, setProducts] = useState<any[]>(defaultProducts);
+  
+  // Categories State
+  const [categories, setCategories] = useState<string[]>(['biralar', 'kokteyller', 'atistirmalik']);
+  
+  // Category Settings State
+  const [categorySettings, setCategorySettings] = useState<{ [key: string]: CategorySettings }>({
+    biralar: { showInMenu: true, showInInventory: true, requiresIngredients: false },
+    kokteyller: { showInMenu: true, showInInventory: true, requiresIngredients: true },
+    atistirmalik: { showInMenu: true, showInInventory: true, requiresIngredients: false }
+  });
   
   // Inventory State - TÜM KATEGORİLER
   const [inventory, setInventory] = useState<InventoryProduct[]>([
@@ -191,6 +217,9 @@ export default function App() {
     { id: 'f8', name: 'SOĞAN HALKASI', category: 'atistirmalik', currentStock: 25, minStock: 12, unit: 'porsiyon', supplier: 'Mutfak Tedarik', lastRestocked: '03.12.2024', price: 45 },
     { id: 'f9', name: 'MEZE TABAĞI', category: 'atistirmalik', currentStock: 18, minStock: 10, unit: 'porsiyon', supplier: 'Mutfak Tedarik', lastRestocked: '02.12.2024', price: 70 },
   ]);
+
+  // Ingredients State - Hammaddeler (Kokteyller için)
+  const [ingredients, setIngredients] = useState<Ingredient[]>(defaultIngredients);
 
   // Yeni ürünler eklendiğinde inventory'ye ekle (TÜM KATEGORİLER)
   useEffect(() => {
@@ -375,16 +404,76 @@ export default function App() {
 
     // STOK DÜŞÜRME: Sipariş verilen ürünleri stoktan düş
     const updatedInventory = [...inventory];
+    const updatedIngredients = [...ingredients];
+    let stockError = '';
+    
     orderItems.forEach(orderItem => {
-      const productIndex = updatedInventory.findIndex(p => p.name === orderItem.name);
-      if (productIndex !== -1) {
-        updatedInventory[productIndex] = {
-          ...updatedInventory[productIndex],
-          currentStock: Math.max(0, updatedInventory[productIndex].currentStock - 1)
-        };
+      // Ürünü products'tan bul
+      const product = products.find(p => p.name === orderItem.name);
+      
+      if (product && product.isCocktail && product.recipe) {
+        // KOKTEYL: Reçete bazlı stok düşümü
+        console.log(`🍹 Kokteyl sipariş: ${product.name}`);
+        
+        product.recipe.forEach(recipeItem => {
+          const ingredientIndex = updatedIngredients.findIndex(ing => ing.id === recipeItem.ingredientId);
+          
+          if (ingredientIndex !== -1) {
+            const ingredient = updatedIngredients[ingredientIndex];
+            const requiredAmount = recipeItem.amount;
+            
+            console.log(`  - ${ingredient.name}: ${requiredAmount}${ingredient.unit} kullanılacak (Mevcut: ${ingredient.currentStock}${ingredient.unit})`);
+            
+            // Stok kontrolü
+            if (ingredient.currentStock < requiredAmount) {
+              stockError = `${ingredient.name} stoğu yetersiz! (Gerekli: ${requiredAmount}${ingredient.unit}, Mevcut: ${ingredient.currentStock}${ingredient.unit})`;
+              return;
+            }
+            
+            // Stoğu düş
+            updatedIngredients[ingredientIndex] = {
+              ...ingredient,
+              currentStock: Math.max(0, ingredient.currentStock - requiredAmount)
+            };
+            
+            console.log(`  ✅ ${ingredient.name} stok güncellendi: ${ingredient.currentStock}${ingredient.unit} -> ${updatedIngredients[ingredientIndex].currentStock}${ingredient.unit}`);
+          } else {
+            console.warn(`  ⚠️ İçerik bulunamadı: ${recipeItem.ingredientId}`);
+          }
+        });
+      } else {
+        // BİRA/ATIŞTIRMALIK: Adet bazlı stok düşümü
+        const productIndex = updatedInventory.findIndex(p => p.name === orderItem.name);
+        if (productIndex !== -1) {
+          const currentProduct = updatedInventory[productIndex];
+          console.log(`🍺 Adet bazlı sipariş: ${currentProduct.name} (Mevcut: ${currentProduct.currentStock} ${currentProduct.unit})`);
+          
+          // Stok kontrolü
+          if (currentProduct.currentStock < 1) {
+            stockError = `${currentProduct.name} stoğu yetersiz!`;
+            return;
+          }
+          
+          updatedInventory[productIndex] = {
+            ...currentProduct,
+            currentStock: Math.max(0, currentProduct.currentStock - 1)
+          };
+          
+          console.log(`  ✅ ${currentProduct.name} stok güncellendi: ${currentProduct.currentStock} -> ${updatedInventory[productIndex].currentStock}`);
+        }
       }
     });
+    
+    // Eğer stok hatası varsa siparişi engelle
+    if (stockError) {
+      toast.error('Stok Yetersiz!', {
+        description: stockError
+      });
+      return;
+    }
+    
     setInventory(updatedInventory);
+    setIngredients(updatedIngredients);
   };
 
   const handlePartialPayment = (tableId: string, paidAmount: number, cashAmount: number, cardAmount: number, selectedItemIds: string[]) => {
@@ -1180,7 +1269,18 @@ export default function App() {
     const storedWastes = localStorage.getItem('pos_wastes');
     const storedTransactions = localStorage.getItem('pos_transactions');
     const storedInventory = localStorage.getItem('pos_inventory');
+    const storedIngredients = localStorage.getItem('pos_ingredients');
     const storedProducts = localStorage.getItem('pos_products');
+    const storedCategories = localStorage.getItem('pos_categories');
+    
+    // ESKİ KEY'İ TEMİZLE - Artık kullanılmıyor
+    const oldCategorySettings = localStorage.getItem('pos_categorySettings');
+    if (oldCategorySettings) {
+      console.log('🧹 Eski categorySettings key temizleniyor...');
+      localStorage.removeItem('pos_categorySettings');
+    }
+    
+    const storedCategorySettings = localStorage.getItem('pos_category_settings');
     
     if (storedTables) setTables(JSON.parse(storedTables));
     if (storedOrders) setOrders(JSON.parse(storedOrders));
@@ -1188,6 +1288,33 @@ export default function App() {
     if (storedWastes) setWastes(JSON.parse(storedWastes));
     if (storedTransactions) setTransactions(JSON.parse(storedTransactions));
     if (storedInventory) setInventory(JSON.parse(storedInventory));
+    if (storedIngredients) {
+      setIngredients(JSON.parse(storedIngredients));
+    } else {
+      // İlk yüklemede localStorage boşsa defaultIngredients'ı kaydet
+      localStorage.setItem('pos_ingredients', JSON.stringify(defaultIngredients));
+      setIngredients(defaultIngredients);
+      console.log('✅ Varsayılan hammaddeler localStorage\'a kaydedildi');
+    }
+    if (storedCategories) setCategories(JSON.parse(storedCategories));
+    
+    // CategorySettings yükleme - Default değerler ile
+    if (storedCategorySettings) {
+      const loadedSettings = JSON.parse(storedCategorySettings);
+      console.log('📂 CategorySettings localStorage\'dan yüklendi:', loadedSettings);
+      setCategorySettings(loadedSettings);
+    } else {
+      // Default değerler - tüm kategoriler görünür
+      const defaultSettings = {
+        biralar: { showInMenu: true, showInInventory: true },
+        kokteyller: { showInMenu: true, showInInventory: true },
+        atistirmalik: { showInMenu: true, showInInventory: true }
+      };
+      console.log('✅ Default categorySettings ayarlandı:', defaultSettings);
+      setCategorySettings(defaultSettings);
+      localStorage.setItem('pos_category_settings', JSON.stringify(defaultSettings));
+    }
+    
     if (storedProducts) {
       setProducts(JSON.parse(storedProducts));
     } else {
@@ -1206,11 +1333,32 @@ export default function App() {
     localStorage.setItem('pos_wastes', JSON.stringify(wastes));
     localStorage.setItem('pos_transactions', JSON.stringify(transactions));
     localStorage.setItem('pos_inventory', JSON.stringify(inventory));
+    localStorage.setItem('pos_ingredients', JSON.stringify(ingredients)); // Hammadde stoğu
+    localStorage.setItem('pos_categories', JSON.stringify(categories));
+    localStorage.setItem('pos_category_settings', JSON.stringify(categorySettings));
     // Sadece products boş değilse kaydet
     if (products.length > 0) {
       localStorage.setItem('pos_products', JSON.stringify(products));
     }
-  }, [tables, orders, payments, wastes, transactions, inventory, products]);
+  }, [tables, orders, payments, wastes, transactions, inventory, ingredients, products, categories, categorySettings]);
+
+  // Categories güncelleme event'ini dinle
+  useEffect(() => {
+    const handleCategoriesUpdate = () => {
+      const storedCategorySettings = localStorage.getItem('pos_category_settings');
+      if (storedCategorySettings) {
+        const loadedSettings = JSON.parse(storedCategorySettings);
+        console.log('🔄 CategorySettings güncellendi (event):', loadedSettings);
+        setCategorySettings(loadedSettings);
+      }
+    };
+    
+    window.addEventListener('categories-updated', handleCategoriesUpdate);
+    
+    return () => {
+      window.removeEventListener('categories-updated', handleCategoriesUpdate);
+    };
+  }, []);
 
   // Uygulama kapatılırken otomatik yedekleme yap
   useEffect(() => {
@@ -1388,7 +1536,16 @@ export default function App() {
             onRevertWaste={handleRevertWaste}
           />
         )}
-        {currentScreen === 'inventory' && <InventoryScreen products={inventory} onUpdateStock={handleUpdateStock} onUpdateMinStock={handleUpdateMinStock} />}
+        {currentScreen === 'inventory' && <InventoryScreen products={inventory} ingredients={ingredients} categories={categories} categorySettings={categorySettings} onUpdateStock={handleUpdateStock} onUpdateMinStock={handleUpdateMinStock} onUpdateIngredient={(ingredientId, newStock) => {
+          const updatedIngredients = ingredients.map(ing => 
+            ing.id === ingredientId ? { ...ing, currentStock: newStock, lastRestocked: new Date().toLocaleDateString('tr-TR') } : ing
+          );
+          setIngredients(updatedIngredients);
+          localStorage.setItem('pos_ingredients', JSON.stringify(updatedIngredients));
+        }} onIngredientsUpdate={(newIngredients) => {
+          setIngredients(newIngredients);
+          localStorage.setItem('pos_ingredients', JSON.stringify(newIngredients));
+        }} />}
         {currentScreen === 'backup' && <BackupScreen onDataRestore={() => {
           // Reload data from localStorage after restore
           const storedTables = localStorage.getItem('pos_tables');
@@ -1397,6 +1554,7 @@ export default function App() {
           const storedWastes = localStorage.getItem('pos_wastes');
           const storedTransactions = localStorage.getItem('pos_transactions');
           const storedInventory = localStorage.getItem('pos_inventory');
+          const storedIngredients = localStorage.getItem('pos_ingredients');
           const storedProducts = localStorage.getItem('pos_products');
           
           if (storedTables) setTables(JSON.parse(storedTables));
@@ -1405,9 +1563,10 @@ export default function App() {
           if (storedWastes) setWastes(JSON.parse(storedWastes));
           if (storedTransactions) setTransactions(JSON.parse(storedTransactions));
           if (storedInventory) setInventory(JSON.parse(storedInventory));
+          if (storedIngredients) setIngredients(JSON.parse(storedIngredients));
           if (storedProducts) setProducts(JSON.parse(storedProducts));
         }} />}
-        {currentScreen === 'products' && <ProductManagementScreen onProductsUpdate={() => {
+        {currentScreen === 'products' && <ProductManagementScreen ingredients={ingredients} onProductsUpdate={() => {
           // Products güncellendiğinde localStorage'dan yükle
           const storedProducts = localStorage.getItem('pos_products');
           if (storedProducts) {
